@@ -1,0 +1,40 @@
+@startuml Blackberries Use Case Diagram
+
+!define RECTANGLE class
+
+actor UnregisteredUser as "Незарегистрированный\nпользователь"
+actor RegisteredUser as "Зарегистрированный\nпользователь"
+actor Seller as "Продавец"
+actor Support as "Служба\nподдержки"
+
+UnregisteredUser --|> (Просмотр\nтоваров)
+UnregisteredUser --|> (Регистрация)
+UnregisteredUser --|> (Добавление товаров)
+UnregisteredUser --|> (Просмотр информации)
+UnregisteredUser --|> (Сравнение товаров)
+
+RegisteredUser --down--|> (Просмотр\nтоваров)
+RegisteredUser --down--|>  (Добавление товаров\nв корзину)
+RegisteredUser --down--|>  (Просмотр информации\nо товарах)
+RegisteredUser --down--|>  (Сравнение товаров)
+RegisteredUser --up--|>  (Управление\nпрофилем)
+RegisteredUser --up--|>  (Просмотр и отслеживание\nзаказов)
+RegisteredUser --up--|>  (Отзывы и рейтинги\nпродуктов)
+RegisteredUser --up--|>  (Создание и редактирование\nсписков желаний)
+RegisteredUser --right--|> (Подписка на новости\nи акции)
+RegisteredUser --right--|> (Оформление\nвозвратов и обменов)
+RegisteredUser --left--|> (Сохранение платежных\nданных)
+RegisteredUser --left--|> (Коммуникация\nс службой поддержки)
+RegisteredUser --down--|> (Персонализированные\nрекомендации)
+
+Support --left--|> (Ответ на запросы\nпокупателей)
+
+Seller --up--|> (Создание и управление\nкаталогом товаров)
+Seller --up--|> (Управление заказами)
+Seller --|> (Отслеживание статуса\nдоставки)
+Seller --|> (Управление\nскладом)
+Seller --|> (Обработка\nплатежей)
+Seller --|> (Коммуникация\nс покупателями)
+Seller --up--|> (Аналитика и\nотчетность)
+
+@enduml

@@ -1,0 +1,203 @@
+﻿<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Blackberries</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/Blackberries.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-controller="Home">Blackberries</a>
+                @if (@ViewData["IsAuthenticated"] != null && (bool)@ViewData["IsAuthenticated"] && @ViewData["UserName"] != null)
+                {
+                    <a class="nav-link text-dark" id="loginIcon">
+                        <img src="~/Icon/User_Icon_Standard.png" alt="Вход" style="width: 20px; height: 20px; border-radius: 50%;">
+                        @ViewData["UserName"]
+                    </a>
+                }
+                else
+                {
+                    <a class="nav-link text-dark" id="loginIcon">
+                        <img src="~/Icon/User_Icon_Standard.png" alt="Вход" style="width: 20px; height: 20px; border-radius: 50%;">
+                        Вход
+                    </a>
+                }
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Contacts">Контакты</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2024 - Blackberries - <a asp-area="" asp-controller="Contacts">Контакты</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @if (@ViewData["IsAuthenticated"] != null && (bool)@ViewData["IsAuthenticated"] && @ViewData["UserName"] != null)
+    {
+        <!-- Код для отображения модального окна Выхода -->
+        <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModaldalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="text-center" id="logoutModalLabel">Выход</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="/Home/Logout">
+                            <div class="text-center">
+                                <p>
+                                    Вы действительно хотите выйти?
+                                    <br />
+                                </p>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Выйти</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Код для отображения модального окна Входа -->
+        <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="text-center" id="loginModalLabel">Вход / Регистрация</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="/Home/Login">
+                            <div class="form-group mb-3">
+                                <label for="inputUserName" class="form-label">Email</label>
+                                <input class="form-control" type="text" placeholder="Введите email" name="userName" id="inputUserName" required />
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="inputPassword" class="form-label">Пароль</label>
+                                <input class="form-control" type="password" placeholder="Введите пароль" name="password" id="inputPassword" required />
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Войти</button>
+                        </form>
+                        <hr />
+                        <!-- Ссылки для регистрации -->
+                        <div class="text-center">
+                            <p>
+                                Нет аккаунта?
+                                <br />
+                                <a href="#" data-bs-toggle="modal" id="registerLordLinkId" data-bs-target="#registerModalSeller" data-bs-dismiss="modal">Регистрация как продавец</a>
+                                <br />
+                                <a href="#" data-bs-toggle="modal" id="registerBuyerLinkId" data-bs-target="#registerModalBuyer" data-bs-dismiss="modal">Регистрация как покупатель</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для регистрации  продавца -->
+        <div class="modal fade" id="registerModalSeller" tabindex="-1" role="dialog" aria-labelledby="registerModalLabelSeller" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="registerModalLabelSeller">Регистрация продавца</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="/Home/RegisterSeller">
+                            <div class="row mb-3">
+                                <label for="inputSellerEmail" class="col-sm-2 col-form-label">Email</label>
+                                <div class="col-sm-10">
+                                    <input type="email" class="form-control" id="inputSellerEmail" name="sellerEmail" placeholder="Введите ваш email" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputSellerPassword" class="col-sm-2 col-form-label">Пароль</label>
+                                <div class="col-sm-10">
+                                    <input type="password" class="form-control" id="inputSellerPassword" name="sellerPassword" placeholder="Введите пароль" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputSellerName" class="col-sm-2 col-form-label">Имя</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputSellerName" name="sellerName" placeholder="Введите ваше имя" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputSellerTelephone" class="col-sm-2 col-form-label">Телефон</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputSellerTelephone" name="sellerTelephone" placeholder="Введите вашь телефон" required />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Зарегистрироваться</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для регистрации покупателя -->
+        <div class="modal fade" id="registerModalBuyer" tabindex="-1" role="dialog" aria-labelledby="registerModalLabelBuyer" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="registerModalLabelBuyer">Регистрация покупателя</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="/Home/RegisterBuyer">
+                            <div class="row mb-3">
+                                <label for="inputBuyerName" class="col-sm-2 col-form-label">Имя</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputBuyerName" name="buyerName" placeholder="Введите ваше имя" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputBuyerTelephone" class="col-sm-2 col-form-label">Телефон</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputBuyerTelephone" name="buyerTelephone" placeholder="Введите вашь телефон" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputBuyerEmail" class="col-sm-2 col-form-label">Email</label>
+                                <div class="col-sm-10">
+                                    <input type="email" class="form-control" id="inputBuyerEmail" name="buyerEmail" placeholder="Введите ваш email" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputBuyerPassword" class="col-sm-2 col-form-label">Пароль</label>
+                                <div class="col-sm-10">
+                                    <input type="password" class="form-control" id="inputBuyerPassword" name="buyerPassword" placeholder="Введите пароль" required />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Зарегистрироваться</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

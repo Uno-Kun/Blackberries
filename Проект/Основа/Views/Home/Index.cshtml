@@ -1,0 +1,603 @@
+﻿@model Blackberries.ViewModels.HomeIndexViewModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script> 
+
+@if (ViewData["IsAuthenticated"] != null && (bool)ViewData["IsAuthenticated"])
+{
+    <h1 class="display-4">Welcome to Blackberries,  @ViewData["UserName"]!</h1>
+
+    @if ((string?)ViewData["Role"] == "Seller")
+    {
+        <script src="~/js/seller.js" asp-append-version="true"></script>
+
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+                   <div class="container" style="justify-content: start">
+               <a class="nav-link text-dark" id="accountNavLink">
+                   <img src="~/Icon/User_Icon_Standard.png" alt="Аккаунт" style="width: 20px; height: 20px; border-radius: 50%;">
+                   Аккаунт
+               </a>
+               <a class="nav-link text-dark" id="addProposalNavLink">
+                   <img src="~/Icon/proposal.png" alt="Предложение" style="width: 40px; height: 20px; border-radius: 50%;">
+                   Разместить предложение
+               </a>
+            </div>
+        </nav>
+
+        <div class="tab">
+            <button id="btnMyHousings" class="tablinks" onclick="openSellerTab('btnMyHousings', 'myHousings')">Мои предложения</button>
+            <button id="btnRequests" class="tablinks" onclick="openSellerTab('btnRequests', 'requests')">Заявки</button>
+        </div>
+
+        <div id="myHousings" class="tabcontent">
+            <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">Город</th>
+                    <th scope="col">Район</th>
+                    <th scope="col">Тип жилья</th>
+                    <th scope="col">Этаж</th>
+                    <th scope="col">Площадь (кв.м)</th>
+                    <th scope="col">Стоимость (руб.)</th>
+                    <th scope="col">Открыто</th>
+                    <th scope="col"></th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var housing in Model.SellerHousings)
+                {
+                    <tr>
+                        <td>@housing.City</td>
+                        <td>@housing.District</td>
+                        <td>@housing.HousingType</td>
+                        <td>@housing.Floor</td>
+                        <td>@housing.Area</td>
+                        <td>@housing.Price</td>
+                        @if (housing.Hidden)
+                        {
+                            <td align="center"><img src="~/Icon/decline.png" alt="Скрыто" style="width: 27px; height: 27px; border-radius: 50%;"></td>
+                        }
+                        else
+                        {
+                            <td align="center"><img src="~/Icon/accept.png" alt="Открыто" style="width: 20px; height: 20px; border-radius: 50%;"></td>
+                        }
+                        <td><a id=@($"editHousingLink{@housing.Id}") href="#" onclick=@($"editHousing({@housing.Id})")>Изменить</a></td>
+                        <td><a id=@($"uploadFileLink{@housing.Id}") href="#" onclick=@($"uploadFile({@housing.Id},[{string.Join(",", @housing.PhotoIds)}])")>Фото</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>   
+
+        <div id="requests" class="tabcontent">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Предложение</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Имя</th>
+                        <th scope="col">Телефон</th>
+                        <th scope="col">Подтверждено</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var request in Model.SellerRequestsForViewing)
+                    {
+                        <tr>
+                            <td>@request.housingDescription</td>
+                            <td>@request.buyerEmail</td>
+                            <td>@request.buyerName</td>
+                            <td>@request.buyerTelephone</td>
+                            @if (request.sellerConfirmed)
+                            {
+                                <td align="center"><img src="~/Icon/accept.png" alt="Подтвеждено" style="width: 20px; height: 20px; border-radius: 50%;"></td>
+                                <td>@Html.ActionLink("Отменить", "SetRequestConfirmation", "Seller", new { requestId = request.id, value = false }, null)</td>
+                            }
+                            else
+                            {
+                                <td align="center"><img src="~/Icon/decline.png" alt="Не подтверждено" style="width: 27px; height: 27px; border-radius: 50%;"></td>
+                                <td>@Html.ActionLink("Подтвердить", "SetRequestConfirmation", "Seller", new { requestId = request.id, value = true }, null)</td>
+                            }
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Модальное окно для редактирования анкеты продавцом -->
+        <div class="modal fade" id="editModalSeller" tabindex="-1" role="dialog" aria-labelledby="registerModalLabelSeller" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="registerModalLabelSeller">Анкета продавца</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editSellerForm" method="post" action="/Seller/UpdateSeller">
+                            <div class="row mb-3" hidden>
+                                <label for="inputSellerId" class="col-sm-2 col-form-label">Идентификатор</label>
+                                <div class="col-sm-10">
+                                    <input type="number" class="form-control" id="inputSellerId" name="id" placeholder="Идентификатор" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputSellerEmail" class="col-sm-2 col-form-label">Email</label>
+                                <div class="col-sm-10">
+                                    <input type="email" class="form-control" id="inputSellerEmail" name="sellerEmail" placeholder="Введите ваш email" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputSellerPassword" class="col-sm-2 col-form-label">Пароль</label>
+                                <div class="col-sm-10">
+                                    <input type="password" class="form-control" id="inputSellerPassword" name="sellerPassword" placeholder="Введите пароль" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputSellerName" class="col-sm-2 col-form-label">Имя</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputSellerName" name="sellerName" placeholder="Введите ваше имя" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputSellerTelephone" class="col-sm-2 col-form-label">Телефон</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputSellerTelephone" name="sellerTelephone" placeholder="Введите вашь телефон" required />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Сохранить</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Код для отображения модального окна Создания/Изменения предложения жилья -->
+        <div class="modal fade" id="addProposalModal" tabindex="-1" role="dialog" aria-labelledby="addProposalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="text-center" id="addProposalLabel">Новое предложение</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editHousingForm" method="post" action="/Seller/CreateOrUpdateHousing">
+                            <div class="row mb-3" hidden>
+                                <label for="inputHousingId" class="col-sm-2 col-form-label">Идентификатор</label>
+                                <div class="col-sm-10">
+                                    <input type="number" class="form-control" id="inputHousingId" name="id" placeholder="Идентификатор"/>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="selectHousingCityDistrict" class="col-sm-3 col-form-label">Город и район</label>
+                                <div class="col-sm-9">
+                                    <select class="form-select" id="selectHousingCityDistrict" name="housingCityDistrict" required>
+                                        <!-- районы городов загружаются с сервера -->
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <label for="inputHousingType" class="col-sm-3 col-form-label">Тип жилья</label>
+                                <div class="col-sm-9">
+                                    <fieldset>
+                                        <input type="radio" id="inputHousingType1" name="housingType" value="Квартира" required />
+                                        <label for="inputHousingType1">Квартира</label>
+                                        <input type="radio" id="inputHousingType2" name="housingType" value="Дом" />
+                                        <label for="inputHousingType2">Дом</label>
+                                    </fieldset>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <label for="inputHousingFloor" class="col-sm-3 col-form-label">Этаж</label>
+                                <div class="col-sm-9">
+                                    <input type="number" id="inputHousingFloor" name="housingFloor" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputHousingArea" class="col-sm-3 col-form-label">Площадь</label>
+                                <div class="col-sm-9">
+                                    <input type="number" id="inputHousingArea" name="housingArea" step="any" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputHousingPrice" class="col-sm-3 col-form-label">Цена</label>
+                                <div class="col-sm-9">
+                                    <input type="number" id="inputHousingPrice" name="housingPrice" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputHousingHidden" class="col-sm-3 col-form-label">Скрыть предложение</label>
+                                <div class="col-sm-9">
+                                    <fieldset>
+                                        <input type="checkbox" id="inputHousingHidden" name="hidden" value="true" />
+                                        <label for="true">Да</label>
+                                    </fieldset>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Сохранить</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для загрузки и просмотра фото жилья -->
+        <div class="modal fade" id="uploadFileModal" tabindex="-1" role="dialog" aria-labelledby="uploadFileLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="text-center" id="uploadFileLabel">Загрузить фото</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="uploadFileForm" method="post" action="/File/Upload/?handler=Upload" enctype="multipart/form-data">
+                            @Html.AntiForgeryToken()
+                            <div class="row mb-3" hidden>
+                                <label for="inputHousingId" class="col-sm-2 col-form-label">Идентификатор жилья</label>
+                                <div class="col-sm-10">
+                                    <input type="number" class="form-control" id="inpHousingId" name="housingId" placeholder="Идентификатор жилья" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <input type="file" id="inputFiles" name="files" multiple accept="image/png, image/jpeg" />
+                            </div>
+                            <input class="btn btn-primary w-100 mb-3" type="submit" value="Upload" />
+                        </form>
+                        <div id="housingPhotoCarousel" class="carousel slide" data-bs-ride="carousel">
+                            <div id="housingPhotoCarouselIndicators" class="carousel-indicators">
+                                <!--Индикаторы создаются скриптом-->
+                            </div>
+                            <div id="housingPhotoCarouselItems" class="carousel-inner">
+                                <!-- Слайды создаются скриптом-->
+                            </div>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#housingPhotoCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#housingPhotoCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if ((string?)ViewData["Role"] == "Buyer")
+    {
+        <script src="~/js/buyer.js" asp-append-version="true"></script>
+
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container" style="justify-content: start">
+                <a class="nav-link text-dark" id="accountNavLink">
+                    <img src="~/Icon/User_Icon_Standard.png" alt="Аккаунт" style="width: 20px; height: 20px; border-radius: 50%;">
+                    Аккаунт
+                </a>
+                <a class="nav-link text-dark" id="addHousingRequirementsNavLink">
+                    <img src="~/Icon/home.png" alt="Требования к жилью" style="width: 25px; height: 25px; border-radius: 50%;">
+                    Требования к жилью
+                </a>
+            </div>
+        </nav>
+
+        <div class="tab">
+            <button id="btnApplicableHousing" class="tablinks" onclick="openBuyerTab('btnApplicableHousing', 'applicableHousing')">Подходящее жилье</button>
+            <button id="btnMyRequest" class="tablinks" onclick="openBuyerTab('btnMyRequest', 'myRequests')">Мои заявки</button>
+        </div>
+
+        <div id="applicableHousing" class="tabcontent">
+            <table id="table1" class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Город</th>
+                        <th scope="col">Район</th>
+                        <th scope="col">Тип жилья</th>
+                        <th scope="col">Этаж</th>
+                        <th scope="col">Площадь (кв.м)</th>
+                        <th scope="col">Стоимость (руб.)</th>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var housing in Model.BuyerApplicableHousings)
+                    {
+                        <tr>
+                            <td>@housing.City</td>
+                            <td>@housing.District</td>
+                            <td>@housing.HousingType</td>
+                            <td>@housing.Floor</td>
+                            <td>@housing.Area</td>
+                            <td>@housing.Price</td>
+                            <td><a id=@($"viewFileLink{@housing.Id}") href="#" onclick=@($"viewFile([{string.Join(",", @housing.PhotoIds)}])")>Фото</a></td>
+                            <td>@Html.ActionLink("Подать заявку", "CreateRequestForViewing", "Buyer", new { housingId = housing.Id}, null)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div id="myRequests" class="tabcontent">
+            <table id="table3" class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Подтверждено</th>
+                        <th scope="col">Город</th>
+                        <th scope="col">Район</th>
+                        <th scope="col">Тип жилья</th>
+                        <th scope="col">Этаж</th>
+                        <th scope="col">Площадь (кв.м)</th>
+                        <th scope="col">Стоимость (руб.)</th>
+                        <th scope="col">Продавец</th>
+                        <th scope="col">Телефон</th>
+                        <th scope="col">E-mail</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var request in Model.BuyerRequestsForViewing)
+                    {
+                        <tr>
+                            @if (request.SellerConfirmed)
+                            {
+                                <td align="center"><img src="~/Icon/accept.png" alt="Подтвеждено" style="width: 20px; height: 20px; border-radius: 50%;"></td>
+                            }
+                            else
+                            {
+                                <td align="center"><img src="~/Icon/decline.png" alt="Не подтверждено" style="width: 27px; height: 27px; border-radius: 50%;"></td>
+                            }
+
+                            <td>@request.City</td>
+                            <td>@request.District</td>
+                            <td>@request.HousingType</td>
+                            <td>@request.Floor</td>
+                            <td>@request.Area</td>
+                            <td>@request.Price</td>
+                            <td>@request.SellerName</td>
+                            <td>@request.SellerTelephone</td>
+                            <td>@request.SellerEmail</td>
+
+                            <td>@Html.ActionLink("Отозвать заявку", "DeleteRequestForViewing", "Buyer", new { requestId = request.Id }, null)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Модальное окно для редактирования анкеты покупателя -->
+        <div class="modal fade" id="editModalBuyer" tabindex="-1" role="dialog" aria-labelledby="registerModalLabelBuyer" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="registerModalLabelBuyer">Анкета покупателя</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editBuyerForm" method="post" action="/Buyer/UpdateBuyer">
+                            <div class="row mb-3" hidden>
+                                <label for="inputBuyerId" class="col-sm-2 col-form-label">Идентификатор</label>
+                                <div class="col-sm-10">
+                                    <input type="number" class="form-control" id="inputBuyerId" name="id" placeholder="Идентификатор" required/>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputBuyerName" class="col-sm-2 col-form-label">Имя</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputBuyerName" name="buyerName" placeholder="Введите ваше имя" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputBuyerTelephone" class="col-sm-2 col-form-label">Телефон</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputBuyerTelephone" name="buyerTelephone" placeholder="Введите вашь телефон" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputBuyerEmail" class="col-sm-2 col-form-label">E-mail</label>
+                                <div class="col-sm-10">
+                                    <input type="email" class="form-control" id="inputBuyerEmail" name="buyerEmail" placeholder="Введите ваш email" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputBuyerPassword" class="col-sm-2 col-form-label">Пароль</label>
+                                <div class="col-sm-10">
+                                    <input type="password" class="form-control" id="inputBuyerPassword" name="buyerPassword" placeholder="Введите пароль" required />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Сохранить</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Код для отображения модального окна Создания/Изменения требований к жилью -->
+
+        <div class="modal fade" id="addHousingRequirementsModal" tabindex="-1" role="dialog" aria-labelledby="addHousingRequirementsLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="text-center" id="addHousingRequirementsLabel">Требования к жилью</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id = "editHousingRequirementsForm" method="post" action="/Buyer/CreateOrUpdateHousingRequirements">
+                            <div class="row mb-3" hidden>
+                                <label for="inputId" class="col-sm-3 col-form-label">Идентификатор</label>
+                                <div class="col-sm-9">
+                                    <input type="number" id="inputId" name="id" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="selectHousingCityDistrict" class="col-sm-3 col-form-label">Город и район</label>
+                                <div class="col-sm-9">
+                                    <select class="form-select" id="selectHousingCityDistrict" name="housingCityDistrict" multiple size="10">
+                                        <!-- районы городов загружаются с сервера -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputHousingType" class="col-sm-3 col-form-label">Тип жилья</label>
+                                <div class="col-sm-9">
+                                    <fieldset>
+                                        <input type="checkbox" id="inputHousingType1" name="housingType1" value="true" />
+                                        <label for="inputHousingType1">Квартира</label>
+                                        <input type="checkbox" id="inputHousingType2" name="housingType2" value="true" />
+                                        <label for="inputHousingType2">Дом</label>
+                                    </fieldset>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <label for="inputHousingFloor" class="col-sm-3 col-form-label">Минимальный этаж</label>
+                                <div class="col-sm-9">
+                                    <input type="number" id="inputHousingMinFloor" name="housingMinFloor" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputHousingArea" class="col-sm-3 col-form-label">Минимальная площадь</label>
+                                <div class="col-sm-9">
+                                    <input type="number" id="inputHousingMinArea" name="housingMinArea" step="any" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputHousingPrice" class="col-sm-3 col-form-label">Максимальная цена</label>
+                                <div class="col-sm-9">
+                                    <input type="number" id="inputHousingMaxPrice" name="housingMaxPrice" />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Сохранить</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для просмотра фото жилья -->
+        <div class="modal fade" id="viewFileModal" tabindex="-1" role="dialog" aria-labelledby="viewFileLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="text-center" id="uploadFileLabel">Фото жилья</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="housingPhotoCarousel" class="carousel slide" data-bs-ride="carousel">
+                            <div id="housingPhotoCarouselIndicators" class="carousel-indicators">
+                                <!--Индикаторы создаются скриптом-->
+                            </div>
+                            <div id="housingPhotoCarouselItems" class="carousel-inner">
+                                <!-- Слайды создаются скриптом-->
+                            </div>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#housingPhotoCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#housingPhotoCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if ((string?)ViewData["Role"] == "Admin")
+    {
+        <script src="~/js/admin.js" asp-append-version="true"></script>
+
+
+        <div class="tab">
+            <button id="btnCityDistrict" class="tablinks" onclick="openAdminTab('btnCityDistrict', 'cityDistrict')">Районы городов</button>
+            <button id="btnOther" class="tablinks" onclick="openAdminTab('btnOther', 'other')">Прочее</button>
+        </div>
+
+        <div id="cityDistrict" class="tabcontent">
+            <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+                <div class="container" style="justify-content: start">
+                    <a class="nav-link text-dark" id="addRecordNavLink">
+                        <img src="~/Icon/add-file.png" alt="Добавить запись" style="width: 25px; height: 25px; border-radius: 50%;">
+                        Добавить запись
+                    </a>
+                </div>
+            </nav>
+
+
+            <table id="table1" class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Город</th>
+                        <th scope="col">Район</th>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cityDistrict in Model.AdminCityDistricts)
+                    {
+                        <tr>
+                            <td>@cityDistrict.City</td>
+                            <td>@cityDistrict.District</td>
+                            <td><a id=@($"editCityDistrict{@cityDistrict.Id}") href="#" onclick=@($"editCityDistrict({@cityDistrict.Id},'{@cityDistrict.City}','{@cityDistrict.District}')")>Изменить</a></td>
+                            <td>@Html.ActionLink("Удалить", "DeleteCityDistrict", "Admin", new { cityDistrictId = cityDistrict.Id }, null)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div id="other" class="tabcontent">
+        </div>
+
+        <!-- Код для отображения модального окна Создания/Изменения записи справлчника Районы городов -->
+
+        <div class="modal fade" id="addCityDistrictModal" tabindex="-1" role="dialog" aria-labelledby="addCityDistrictLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="text-center" id="addCityDistrictLabel">Район города</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editCityDistrictForm" method="post" action="/Admin/CreateOrUpdateCityDistrict">
+                            <div class="row mb-3" hidden>
+                                <label for="inputId" class="col-sm-3 col-form-label">Идентификатор</label>
+                                <div class="col-sm-9">
+                                    <input type="number" id="inputId" name="id" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputCity" class="col-sm-3 col-form-label">Город</label>
+                                <div class="col-sm-9">
+                                    <input type="text" name="city" id="inputCity" required />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputDistrict" class="col-sm-3 col-form-label">Район</label>
+                                <div class="col-sm-9">
+                                    <input type="text" name="district" id="inputDistrict" required />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Сохранить</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="text-center">
+        <h1 class="display-4">Welcome to Blackberries!</h1>
+        <h2 class="display-6">Please, log in.</h2>
+    </div>
+}
